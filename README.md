@@ -12,7 +12,7 @@ Run `npm install` to install all required packages.
 
 The repository contains a sample `.env` file. Rename this from `.env.sample`.
 
-- Put your Trading 212 file path in the `INPUT_FILE` variable.
+- Put your Trading 212 export file path in the `INPUT_FILE` variable.
 - Put the Ghostfolio account name where you want your transactions to end up at in `GHOSTFOLIO_ACCOUNT_ID` 
   - This can be retrieved by going to Accounts > select your account and copying the ID from the URL 
     ![image](https://user-images.githubusercontent.com/5620002/203353840-f5db7323-fb2f-4f4f-befc-e4e340466a74.png)
@@ -23,7 +23,8 @@ The repository contains a sample `.env` file. Rename this from `.env.sample`.
   ![image](https://user-images.githubusercontent.com/5620002/203354878-6a94925b-196b-44dc-9916-61f9b941c42a.png)
   - Go to request headers and search for the `Authorization` header. Copy the value and paste in `GHOSTFOLIO_AUTH_HEADER`
   
-  You can now run `npm run start`. The tool will open your Trading 212 export and will convert this. It retrieves the tickers that are supported YAHOO Finance (e.g. for European stocks like ASML, it will retrieve ASML.AS by the correspinding ISIN). 
+You can now run `npm run start`. The tool will open your Trading 212 export and will convert this. It retrieves the tickers that are supported YAHOO Finance (e.g. for European stocks like ASML, it will retrieve ASML.AS by the correspinding ISIN). 
   
-  The export file can now be imported in Ghostfolio by going to Portfolio > Activities and pressing the 3 dots at the top right of the table. Select your file and wait for the job to complete.
-  ![image](https://user-images.githubusercontent.com/5620002/203356387-1f42ca31-7cff-44a5-8f6c-84045cf7101e.png)
+The export file can now be imported in Ghostfolio by going to Portfolio > Activities and pressing the 3 dots at the top right of the table. Select your file and wait for the job to complete.
+
+![image](https://user-images.githubusercontent.com/5620002/203356387-1f42ca31-7cff-44a5-8f6c-84045cf7101e.png)
