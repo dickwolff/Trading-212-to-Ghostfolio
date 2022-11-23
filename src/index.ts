@@ -81,7 +81,11 @@ parse(csvFile, {
         },
         activities: []
     }
-    
+
+    // Retrieve bearer token for authentication.
+    const bearerResponse = await fetch(`${process.env.GHOSTFOLIO_API_URL}/api/v1/auth/anonymous/${process.env.GHOSTFOLIO_SECRET}`);
+    const bearer = await bearerResponse.json();
+
     for (let idx = 0; idx < records.length; idx++) {
         const record = records[idx];
 
@@ -97,7 +101,7 @@ parse(csvFile, {
         const tickerUrl = `${process.env.GHOSTFOLIO_API_URL}/api/v1/symbol/lookup?query=${record.isin}`;
         const tickerResponse = await fetch(tickerUrl, {
             method: "GET",
-            headers: [["Authorization", process.env.GHOSTFOLIO_AUTH_HEADER]]
+            headers: [["Authorization", `Bearer ${bearer.authToken}`]]
         });
 
         // Check if response was not unauthorized.
