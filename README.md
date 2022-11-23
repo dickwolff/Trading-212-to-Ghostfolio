@@ -23,7 +23,7 @@ The repository contains a sample `.env` file. Rename this from `.env.sample`.
   ![image](https://user-images.githubusercontent.com/5620002/203354878-6a94925b-196b-44dc-9916-61f9b941c42a.png)
   - Go to request headers and search for the `Authorization` header. Copy the value and paste in `GHOSTFOLIO_AUTH_HEADER`
   
-You can now run `npm run start`. The tool will open your Trading 212 export and will convert this. It retrieves the tickers that are supported YAHOO Finance (e.g. for European stocks like ASML, it will retrieve ASML.AS by the correspinding ISIN). 
+You can now run `npm run start`. The tool will open your Trading 212 export and will convert this. It retrieves the tickers that are supported YAHOO Finance (e.g. for European stocks like `ASML`, it will retrieve `ASML.AS` by the corresponding ISIN). 
   
 The export file can now be imported in Ghostfolio by going to Portfolio > Activities and pressing the 3 dots at the top right of the table. Select your file and wait for the job to complete.
 
