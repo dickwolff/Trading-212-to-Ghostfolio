@@ -11,7 +11,7 @@ require("dotenv").config();
 // Define import file path.
 const inputFile = process.env.INPUT_FILE;
 
-// Header mapping from the Trading 212 CSV export.
+// Generic header mapping from the Trading 212 CSV export.
 const csvHeaders = [
     "action",
     "time",
@@ -22,13 +22,25 @@ const csvHeaders = [
     "priceShare",
     "currency",
     "exchangeRate",
-    "total",
-    "withholdingTax",
-    "currencyWithholdingTax",
-    "chargeAmount",
-    "notes",
-    "id"];
+    "total"];
+
+// Read file contents of the CSV export.
 const csvFile = fs.readFileSync(inputFile, "utf-8");
+
+// If a dividend record was in the export, add "Withholding Tax" & "Currency (withholding tax)" headers.
+if (csvFile.indexOf("Dividend") > -1) { 
+    csvHeaders.push("withholdingTax");
+    csvHeaders.push("currencyWithholdingTax");
+}
+
+// If a deposit record was in the export, add "Charge amount" & "Notes" headers.
+if (csvFile.indexOf("Deposit") > -1) { 
+    csvHeaders.push("chargeAmount");
+    csvHeaders.push("notes");
+}
+
+// Always put ID header at the end.
+csvHeaders.push("id");
 
 // Parse the CSV and convert to Ghostfolio import format.
 parse(csvFile, {
@@ -116,7 +128,7 @@ parse(csvFile, {
         // Add record to export.
         exportFile.activities.push({
             accountId: process.env.GHOSTFOLIO_ACCOUNT_ID,
-            comment: record.notes,
+            comment: "",
             fee: 0,
             quantity: record.noShares,
             type: GhostfolioOrderType[record.action],

@@ -6,7 +6,9 @@ This tool allows you to convert a [Trading 212](https://trading212.com) transact
 
 ## How to use
 
-Clone the repo to your local machine and open with your editor of choice (e.g. Visual Studio Code).
+Go to Trading 212 and create an export file (via History > Download icon). Choose the period from which you wish to export your history and click download.
+
+Next, clone the repo to your local machine and open with your editor of choice (e.g. Visual Studio Code).
 
 Run `npm install` to install all required packages.
 
