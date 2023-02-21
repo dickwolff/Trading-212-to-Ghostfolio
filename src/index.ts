@@ -21,11 +21,19 @@ const csvHeaders = [
     "noShares",
     "priceShare",
     "currency",
-    "exchangeRate",
-    "total"];
+    "exchangeRate"];
+
 
 // Read file contents of the CSV export.
 const csvFile = fs.readFileSync(inputFile, "utf-8");
+
+// If a sell order was in the export, add "Result" header which contains the gains/losses made by this sell.
+if (csvFile.indexOf("sell") > -1) {
+    csvHeaders.push("result");
+}
+
+// Add another generic header.
+csvHeaders.push("total");
 
 // If a dividend record was in the export, add "Withholding Tax" & "Currency (withholding tax)" headers.
 if (csvFile.indexOf("Dividend") > -1) { 
@@ -41,6 +49,11 @@ if (csvFile.indexOf("Deposit") > -1) {
 
 // Always put ID header at the end.
 csvHeaders.push("id");
+
+// Currency conversion fee, if any.
+if (csvFile.indexOf("conversion") > -1) {
+    csvHeaders.push("currencyConversionFee");
+}
 
 // Parse the CSV and convert to Ghostfolio import format.
 parse(csvFile, {
