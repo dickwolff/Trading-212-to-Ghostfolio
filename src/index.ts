@@ -5,6 +5,7 @@ import fetch from "cross-fetch";
 import { parse } from "csv-parse";
 import { Trading212Record } from "../models/trading212Record";
 import { GhostfolioOrderType } from "../models/ghostfolioOrderType";
+import cliProgesss from "cli-progress";
 
 require("dotenv").config();
 
@@ -36,14 +37,18 @@ if (csvFile.indexOf("sell") > -1) {
 csvHeaders.push("total");
 
 // If a dividend record was in the export, add "Withholding Tax" & "Currency (withholding tax)" headers.
-if (csvFile.indexOf("Dividend") > -1) { 
+if (csvFile.indexOf("Dividend") > -1) {
     csvHeaders.push("withholdingTax");
     csvHeaders.push("currencyWithholdingTax");
 }
 
-// If a deposit record was in the export, add "Charge amount" & "Notes" headers.
-if (csvFile.indexOf("Deposit") > -1) { 
+// If a deposit record was in the export, add "Charge amount" header.
+if (csvFile.indexOf("Deposit") > -1) {
     csvHeaders.push("chargeAmount");
+}
+
+// If either a deposit or withdrawal record was found, add "Notes" header.
+if (csvFile.indexOf("Deposit") > -1 || csvFile.indexOf("Withdrawal") > -1) {
     csvHeaders.push("notes");
 }
 
@@ -95,7 +100,7 @@ parse(csvFile, {
         return columnValue;
     }
 }, async (_, records: Trading212Record[]) => {
-
+    
     let errorExport = false;
 
     console.log(`Read CSV file ${inputFile}. Start processing..`);
@@ -111,17 +116,20 @@ parse(csvFile, {
     const bearerResponse = await fetch(`${process.env.GHOSTFOLIO_API_URL}/api/v1/auth/anonymous/${process.env.GHOSTFOLIO_SECRET}`);
     const bearer = await bearerResponse.json();
 
+    // Start progress bar.
+    const progress = new cliProgesss.SingleBar({}, cliProgesss.Presets.shades_classic);
+    progress.start(records.length - 1, 0);
+
     for (let idx = 0; idx < records.length; idx++) {
         const record = records[idx];
-
-        console.log(`\tProcessing ${idx + 1} of ${records.length}`);
+        progress.update(idx);
 
         // Skip deposit/withdraw transactions.
-        if (record.action.toLocaleLowerCase().indexOf("deposit") > -1 || 
+        if (record.action.toLocaleLowerCase().indexOf("deposit") > -1 ||
             record.action.toLocaleLowerCase().indexOf("withdraw") > -1) {
             continue;
         }
-        
+
         // Retrieve YAHOO Finance ticker that corresponds to the ISIN from Trading 212 record.
         const tickerUrl = `${process.env.GHOSTFOLIO_API_URL}/api/v1/symbol/lookup?query=${record.isin}`;
         const tickerResponse = await fetch(tickerUrl, {
@@ -152,6 +160,8 @@ parse(csvFile, {
             symbol: tickers.items[0].symbol
         });
     }
+
+    progress.stop();
 
     // Only export when no error has occured.
     if (!errorExport) {
