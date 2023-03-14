@@ -25,6 +25,16 @@ The repository contains a sample `.env` file. Rename this from `.env.sample`.
   
 You can now run `npm run start`. The tool will open your Trading 212 export and will convert this. It retrieves the tickers that are supported YAHOO Finance (e.g. for European stocks like `ASML`, it will retrieve `ASML.AS` by the corresponding ISIN). 
   
-The export file can now be imported in Ghostfolio by going to Portfolio > Activities and pressing the 3 dots at the top right of the table. Select your file and wait for the job to complete.
+The export file can now be imported in Ghostfolio by going to Portfolio > Activities and pressing the 3 dots at the top right of the table. Since Ghostfolio 1.221.0, you can now preview the import and validate the data has been converted correctly. When it is to your satisfaction, press import to add the activities to your portfolio.
 
 ![image](https://user-images.githubusercontent.com/5620002/203356387-1f42ca31-7cff-44a5-8f6c-84045cf7101e.png)
+
+-------
+
+## Potential future development
+
+The list below contains some plans of how this project could be improved. Options are to be validated on their feasibility.
+
+- [ ] More user friendly import (not via command line)
+- [ ] Connect directly to Trading 212 API (removing the manual export step)
+- [ ] Import directly into Ghostfolio via the API (removing the manual import step)
