@@ -52,8 +52,10 @@ if (csvFile.indexOf("Deposit") > -1 || csvFile.indexOf("Withdrawal") > -1) {
     csvHeaders.push("notes");
 }
 
-// Always put ID header at the end.
-csvHeaders.push("id");
+// If either a deposit or buy record was found, add "ID" header.
+if (csvFile.indexOf("Deposit") > -1 || csvFile.indexOf("buy") > -1) {
+    csvHeaders.push("id");
+}
 
 // Currency conversion fee, if any.
 if (csvFile.indexOf("conversion") > -1) {
