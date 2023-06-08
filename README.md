@@ -1,5 +1,8 @@
 # Trading 212 to Ghostfolio
 
+[![Shield: Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-yellow?logo=buymeacoffee)](https://www.buymeacoffee.com/dickw0lff)
+
+
 This tool allows you to convert a [Trading 212](https://trading212.com) transaction export (CSV) to an import file that can be read by [Ghostfolio](https://github.com/ghostfolio/ghostfolio/). 
 
 **NOTICE: It is recommended to only use this when you have a local instance of Ghostfolio, so you don't spam the online service hosted by Ghostfolio!**
