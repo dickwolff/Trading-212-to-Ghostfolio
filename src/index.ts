@@ -22,8 +22,8 @@ const csvHeaders = [
     "noShares",
     "priceShare",
     "currency",
-    "exchangeRate"];
-
+    "exchangeRate",
+    "currencyResult"];
 
 // Read file contents of the CSV export.
 const csvFile = fs.readFileSync(inputFile, "utf-8");
@@ -33,18 +33,14 @@ if (csvFile.indexOf("sell") > -1) {
     csvHeaders.push("result");
 }
 
-// Add another generic header.
+// Add another pair of generic headers.
 csvHeaders.push("total");
+csvHeaders.push("currencyTotal");
 
 // If a dividend record was in the export, add "Withholding Tax" & "Currency (withholding tax)" headers.
 if (csvFile.indexOf("Dividend") > -1) {
     csvHeaders.push("withholdingTax");
     csvHeaders.push("currencyWithholdingTax");
-}
-
-// If a deposit record was in the export, add "Charge amount" header.
-if (csvFile.indexOf("Deposit") > -1) {
-    csvHeaders.push("chargeAmount");
 }
 
 // If either a deposit or withdrawal record was found, add "Notes" header.
@@ -81,7 +77,7 @@ parse(csvFile, {
             else if (action.indexOf("sell") > -1) {
                 return "sell";
             }
-            else if (action.indexOf("dividend") > -1) {
+            else if (action.indexOf("dividend") > -1) {                
                 return "dividend";
             }
         }
@@ -145,7 +141,7 @@ parse(csvFile, {
             errorExport = true;
             break;
         }
-
+        
         const tickers = await tickerResponse.json();
 
         // Add record to export.
