@@ -22,8 +22,7 @@ const csvHeaders = [
     "noShares",
     "priceShare",
     "currency",
-    "exchangeRate",
-    "currencyResult"];
+    "exchangeRate"];
 
 // Read file contents of the CSV export.
 const csvFile = fs.readFileSync(inputFile, "utf-8");
@@ -33,7 +32,8 @@ if (csvFile.indexOf("sell") > -1) {
     csvHeaders.push("result");
 }
 
-// Add another pair of generic headers.
+// Add another set of generic headers.
+csvHeaders.push("currencyResult");
 csvHeaders.push("total");
 csvHeaders.push("currencyTotal");
 
@@ -48,8 +48,8 @@ if (csvFile.indexOf("Deposit") > -1 || csvFile.indexOf("Withdrawal") > -1) {
     csvHeaders.push("notes");
 }
 
-// If either a deposit or buy record was found, add "ID" header.
-if (csvFile.indexOf("Deposit") > -1 || csvFile.indexOf("buy") > -1) {
+// If either a deposit, buy or sell record was found, add "ID" header.
+if (csvFile.indexOf("Deposit") > -1 || csvFile.indexOf("buy") > -1 || csvFile.indexOf("sell") > -1) {
     csvHeaders.push("id");
 }
 
