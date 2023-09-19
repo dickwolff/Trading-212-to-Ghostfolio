@@ -13,49 +13,20 @@ require("dotenv").config();
 const inputFile = process.env.INPUT_FILE;
 
 // Generic header mapping from the Trading 212 CSV export.
-const csvHeaders = [
-    "action",
-    "time",
-    "isin",
-    "ticker",
-    "name",
-    "noShares",
-    "priceShare",
-    "currency",
-    "exchangeRate"];
+const csvHeaders = [];
 
 // Read file contents of the CSV export.
 const csvFile = fs.readFileSync(inputFile, "utf-8");
 
-// If a sell order was in the export, add "Result" header which contains the gains/losses made by this sell.
-if (csvFile.indexOf("sell") > -1) {
-    csvHeaders.push("result");
-}
+// Get header line and split in columns.
+const firtLine = csvFile.split('\n')[0];
+const colsInFile = firtLine.split(',');
 
-// Add another set of generic headers.
-csvHeaders.push("currencyResult");
-csvHeaders.push("total");
-csvHeaders.push("currencyTotal");
-
-// If a dividend record was in the export, add "Withholding Tax" & "Currency (withholding tax)" headers.
-if (csvFile.indexOf("Dividend") > -1) {
-    csvHeaders.push("withholdingTax");
-    csvHeaders.push("currencyWithholdingTax");
-}
-
-// If either a deposit or withdrawal record was found, add "Notes" header.
-if (csvFile.indexOf("Deposit") > -1 || csvFile.indexOf("Withdrawal") > -1) {
-    csvHeaders.push("notes");
-}
-
-// If either a deposit, buy or sell record was found, add "ID" header.
-if (csvFile.indexOf("Deposit") > -1 || csvFile.indexOf("buy") > -1 || csvFile.indexOf("sell") > -1) {
-    csvHeaders.push("id");
-}
-
-// Currency conversion fee, if any.
-if (csvFile.indexOf("conversion") > -1) {
-    csvHeaders.push("currencyConversionFee");
+for (let idx = 0; idx < colsInFile.length; idx++) {
+ 
+    // Replace all charachters except a-z, and lowercase the string.
+    const col = colsInFile[idx].replace(/[^a-zA-Z]/g, "").toLocaleLowerCase();
+    csvHeaders.push(col);
 }
 
 // Parse the CSV and convert to Ghostfolio import format.
@@ -77,19 +48,19 @@ parse(csvFile, {
             else if (action.indexOf("sell") > -1) {
                 return "sell";
             }
-            else if (action.indexOf("dividend") > -1) {                
+            else if (action.indexOf("dividend") > -1) {
                 return "dividend";
             }
         }
 
         // Parse numbers to floats (from string).
-        if (context.column === "noShares" ||
-            context.column === "priceShare") {
+        if (context.column === "noofshares" ||
+            context.column === "priceshare") {
             return parseFloat(columnValue);
         }
 
         // Patch GBX currency (should be GBp).
-        if (context.column === "currency") {
+        if (context.column === "currencypriceshare") {
             if (columnValue == "GBX") {
                 return "GBp";
             }
@@ -98,7 +69,7 @@ parse(csvFile, {
         return columnValue;
     }
 }, async (_, records: Trading212Record[]) => {
-    
+
     let errorExport = false;
 
     console.log(`Read CSV file ${inputFile}. Start processing..`);
@@ -141,7 +112,7 @@ parse(csvFile, {
             errorExport = true;
             break;
         }
-        
+
         const tickers = await tickerResponse.json();
 
         // Add record to export.
@@ -149,10 +120,10 @@ parse(csvFile, {
             accountId: process.env.GHOSTFOLIO_ACCOUNT_ID,
             comment: "",
             fee: 0,
-            quantity: record.noShares,
+            quantity: record.noOfShares,
             type: GhostfolioOrderType[record.action],
             unitPrice: record.priceShare,
-            currency: record.currency,
+            currency: record.currencyPriceShare,
             dataSource: "YAHOO",
             date: dayjs(record.time).format("YYYY-MM-DDTHH:mm:ssZ"),
             symbol: tickers.items[0].symbol

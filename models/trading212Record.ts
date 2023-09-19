@@ -4,9 +4,9 @@ export class Trading212Record {
     isin: string;
     ticker: string;
     name: string;
-    noShares: number
+    noOfShares: number
     priceShare: number;
-    currency: string;
+    currencyPriceShare: string;
     exchangeRate: number;
     totalPrice: number;
     withholdingTax: number;
