@@ -4,14 +4,14 @@ export class Trading212Record {
     isin: string;
     ticker: string;
     name: string;
-    noOfShares: number
-    priceShare: number;
+    noOfShares: string
+    priceShare: string;
     currencyPriceShare: string;
     exchangeRate: number;
     totalPrice: number;
     withholdingTax: number;
     currencyWithholdingTax: number;
-    chargeAmount: number;
+    chargeAmountEUR: number;
     notes: string;
     id: string;
 }

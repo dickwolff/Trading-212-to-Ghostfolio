@@ -19,13 +19,24 @@ const csvHeaders = [];
 const csvFile = fs.readFileSync(inputFile, "utf-8");
 
 // Get header line and split in columns.
-const firtLine = csvFile.split('\n')[0];
-const colsInFile = firtLine.split(',');
+const firstLine = csvFile.split('\n')[0];
+const colsInFile = firstLine.split(',');
 
-for (let idx = 0; idx < colsInFile.length; idx++) {
- 
-    // Replace all charachters except a-z, and lowercase the string.
-    const col = colsInFile[idx].replace(/[^a-zA-Z]/g, "").toLocaleLowerCase();
+for (let idx = 0; idx <= colsInFile.length; idx++) {
+
+    // Ignore empty columns.
+    if (!colsInFile[idx]) {
+        continue;
+    }
+
+    // Replace all charachters except a-z, and camelCase the string.
+    let col = camelize(colsInFile[idx]);
+
+    // Manual polishing..
+    if (col === "iSIN") {
+        col = col.toLocaleLowerCase();
+    }
+
     csvHeaders.push(col);
 }
 
@@ -120,9 +131,9 @@ parse(csvFile, {
             accountId: process.env.GHOSTFOLIO_ACCOUNT_ID,
             comment: "",
             fee: 0,
-            quantity: record.noOfShares,
+            quantity: parseFloat(record.noOfShares),
             type: GhostfolioOrderType[record.action],
-            unitPrice: record.priceShare,
+            unitPrice: parseFloat(record.priceShare),
             currency: record.currencyPriceShare,
             dataSource: "YAHOO",
             date: dayjs(record.time).format("YYYY-MM-DDTHH:mm:ssZ"),
@@ -143,3 +154,9 @@ parse(csvFile, {
         console.log("Wrote data to 'ghostfolio-t212.json'!");
     }
 });
+
+function camelize(str) {
+    return str.replace(/[^a-zA-Z ]/g, "").replace(/(?:^\w|[A-Z]|\b\w)/g, function (word, index) {
+        return index === 0 ? word.toLowerCase() : word.toUpperCase();
+    }).replace(/\s+/g, '');
+}
