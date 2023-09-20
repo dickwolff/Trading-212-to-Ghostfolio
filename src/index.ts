@@ -28,13 +28,14 @@ for (let idx = 0; idx <= colsInFile.length; idx++) {
     if (!colsInFile[idx]) {
         continue;
     }
-
     // Replace all charachters except a-z, and camelCase the string.
-    let col = camelize(colsInFile[idx]);
+    let col: string = camelize(colsInFile[idx]);
 
     // Manual polishing..
     if (col === "iSIN") {
         col = col.toLocaleLowerCase();
+    } else if (col.endsWith("EUR")) {
+        col = col.slice(0, -3) + "Eur";
     }
 
     csvHeaders.push(col);
@@ -65,13 +66,13 @@ parse(csvFile, {
         }
 
         // Parse numbers to floats (from string).
-        if (context.column === "noofshares" ||
-            context.column === "priceshare") {
+        if (context.column === "noOfShares" ||
+            context.column === "priceShare") {
             return parseFloat(columnValue);
         }
 
         // Patch GBX currency (should be GBp).
-        if (context.column === "currencypriceshare") {
+        if (context.column === "currencyPriceShare") {
             if (columnValue == "GBX") {
                 return "GBp";
             }
@@ -91,7 +92,7 @@ parse(csvFile, {
         },
         activities: []
     }
-
+    
     // Retrieve bearer token for authentication.
     const bearerResponse = await fetch(`${process.env.GHOSTFOLIO_API_URL}/api/v1/auth/anonymous/${process.env.GHOSTFOLIO_SECRET}`);
     const bearer = await bearerResponse.json();
@@ -131,9 +132,9 @@ parse(csvFile, {
             accountId: process.env.GHOSTFOLIO_ACCOUNT_ID,
             comment: "",
             fee: 0,
-            quantity: parseFloat(record.noOfShares),
+            quantity: record.noOfShares,
             type: GhostfolioOrderType[record.action],
-            unitPrice: parseFloat(record.priceShare),
+            unitPrice: record.priceShare,
             currency: record.currencyPriceShare,
             dataSource: "YAHOO",
             date: dayjs(record.time).format("YYYY-MM-DDTHH:mm:ssZ"),
