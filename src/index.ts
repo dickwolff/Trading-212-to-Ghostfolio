@@ -92,7 +92,7 @@ parse(csvFile, {
         },
         activities: []
     }
-    
+
     // Retrieve bearer token for authentication.
     const bearerResponse = await fetch(`${process.env.GHOSTFOLIO_API_URL}/api/v1/auth/anonymous/${process.env.GHOSTFOLIO_SECRET}`);
     const bearer = await bearerResponse.json();
@@ -111,21 +111,12 @@ parse(csvFile, {
             continue;
         }
 
-        // Retrieve YAHOO Finance ticker that corresponds to the ISIN from Trading 212 record.
-        const tickerUrl = `${process.env.GHOSTFOLIO_API_URL}/api/v1/symbol/lookup?query=${record.isin}`;
-        const tickerResponse = await fetch(tickerUrl, {
-            method: "GET",
-            headers: [["Authorization", `Bearer ${bearer.authToken}`]]
-        });
-
-        // Check if response was not unauthorized.
-        if (tickerResponse.status === 401) {
-            console.error("Ghostfolio access token is not valid!");
+        let tickers: any;
+        try { tickers = await getTickers(bearer.authToken, record.isin, record.ticker); }
+        catch {
             errorExport = true;
             break;
         }
-
-        const tickers = await tickerResponse.json();
 
         // Add record to export.
         exportFile.activities.push({
@@ -160,4 +151,56 @@ function camelize(str) {
     return str.replace(/[^a-zA-Z ]/g, "").replace(/(?:^\w|[A-Z]|\b\w)/g, function (word, index) {
         return index === 0 ? word.toLowerCase() : word.toUpperCase();
     }).replace(/\s+/g, '');
+}
+
+/**
+ * Get tickers for a security.
+ * 
+ * @param authToken The authorization bearer token
+ * @param isin The isin of the security
+ * @param ticker The ticker of the security
+ * @returns The tickers that are retrieved from Ghostfolio.
+ */
+async function getTickers(authToken, isin, ticker): Promise<any> {
+
+    // First try by ISIN.
+    let tickers = await getTickersByQuery(authToken, isin);
+
+    // If no result found by ISIN, try by ticker.
+    if (tickers.items.length == 0) {
+        tickers = await getTickersByQuery(authToken, ticker);
+    }
+
+    // Sort by shortest symbol.
+    tickers.items.sort(function(a, b) {
+        console.log(a.symbol, b.symbol)
+        return a.symbol.length - b.symbol.length;
+    });
+
+    return tickers;
+}
+
+/**
+ * Get tickers for a security by a given key.
+ * 
+ * @param authToken The authorization bearer token.
+ * @param query The security identification to query by.
+ * @returns The tickers that are retrieved from Ghostfolio, if any.
+ */
+async function getTickersByQuery(authToken, query): Promise<any> {
+
+    // Retrieve YAHOO Finance ticker that corresponds to the ISIN from Trading 212 record.
+    const tickerUrl = `${process.env.GHOSTFOLIO_API_URL}/api/v1/symbol/lookup?query=${query}`;
+    const tickerResponse = await fetch(tickerUrl, {
+        method: "GET",
+        headers: [["Authorization", `Bearer ${authToken}`]]
+    });
+
+    // Check if response was not unauthorized.
+    if (tickerResponse.status === 401) {
+        console.error("Ghostfolio access token is not valid!");
+        throw new Error("Ghostfolio access token is not valid!");
+    }
+
+    return await tickerResponse.json();
 }
