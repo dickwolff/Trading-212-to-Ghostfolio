@@ -111,8 +111,8 @@ parse(csvFile, {
             continue;
         }
 
-        let tickers: any;
-        try { tickers = await getTickers(bearer.authToken, record.isin, record.ticker); }
+        let ticker: any;
+        try { ticker = await getTicker(bearer.authToken, record); }
         catch {
             errorExport = true;
             break;
@@ -129,7 +129,7 @@ parse(csvFile, {
             currency: record.currencyPriceShare,
             dataSource: "YAHOO",
             date: dayjs(record.time).format("YYYY-MM-DDTHH:mm:ssZ"),
-            symbol: tickers.items[0].symbol
+            symbol: ticker.symbol
         });
     }
 
@@ -161,22 +161,32 @@ function camelize(str) {
  * @param ticker The ticker of the security
  * @returns The tickers that are retrieved from Ghostfolio.
  */
-async function getTickers(authToken, isin, ticker): Promise<any> {
+async function getTicker(authToken, record): Promise<any> {
 
     // First try by ISIN.
-    let tickers = await getTickersByQuery(authToken, isin);
+    let tickers = await getTickersByQuery(authToken, record.isin);
 
     // If no result found by ISIN, try by ticker.
-    if (tickers.items.length == 0) {
-        tickers = await getTickersByQuery(authToken, ticker);
+    if (tickers.length == 0) {
+        tickers = await getTickersByQuery(authToken, record.ticker);
     }
 
-    // Sort by shortest symbol.
-    tickers.items.sort(function(a, b) {
-        return a.symbol.length - b.symbol.length;
-    });
+    // Find a symbol that has the same currency.
+    let tickerMatch = tickers.find(i => i.currency === record.currencyPriceShare);
 
-    return tickers;
+    // If no currency match has been found, try to query Ghostfolio by ticker exclusively and search again.
+    if (!tickerMatch) {
+        const queryByTicker = await getTickersByQuery(authToken, record.ticker);
+        tickerMatch = queryByTicker.find(i => i.currency === record.currencyPriceShare);
+    }
+
+    // If still no currency match has been found, try to query Ghostfolio by name exclusively and search again.
+    if (!tickerMatch) {
+        const queryByTicker = await getTickersByQuery(authToken, record.name);
+        tickerMatch = queryByTicker.find(i => i.currency === record.currencyPriceShare);
+    }
+
+    return tickerMatch;
 }
 
 /**
@@ -201,5 +211,7 @@ async function getTickersByQuery(authToken, query): Promise<any> {
         throw new Error("Ghostfolio access token is not valid!");
     }
 
-    return await tickerResponse.json();
+    var response = await tickerResponse.json();
+
+    return response.items;
 }
