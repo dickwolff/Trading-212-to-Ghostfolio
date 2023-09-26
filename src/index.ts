@@ -173,7 +173,6 @@ async function getTickers(authToken, isin, ticker): Promise<any> {
 
     // Sort by shortest symbol.
     tickers.items.sort(function(a, b) {
-        console.log(a.symbol, b.symbol)
         return a.symbol.length - b.symbol.length;
     });
 
