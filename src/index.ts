@@ -113,9 +113,14 @@ parse(csvFile, {
 
         let ticker: any;
         try { ticker = await getTicker(bearer.authToken, record); }
-        catch {
+        catch (err) {
             errorExport = true;
             break;
+        }
+
+        // Log whenever there was no match found.
+        if (!ticker) {
+            throw new Error(`Could not find a match for ticker ${record.ticker} with currency ${record.currencyPriceShare}`);
         }
 
         // Add record to export.
