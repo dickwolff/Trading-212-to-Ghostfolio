@@ -13,49 +13,32 @@ require("dotenv").config();
 const inputFile = process.env.INPUT_FILE;
 
 // Generic header mapping from the Trading 212 CSV export.
-const csvHeaders = [
-    "action",
-    "time",
-    "isin",
-    "ticker",
-    "name",
-    "noShares",
-    "priceShare",
-    "currency",
-    "exchangeRate"];
+const csvHeaders = [];
 
 // Read file contents of the CSV export.
 const csvFile = fs.readFileSync(inputFile, "utf-8");
 
-// If a sell order was in the export, add "Result" header which contains the gains/losses made by this sell.
-if (csvFile.indexOf("sell") > -1) {
-    csvHeaders.push("result");
-}
+// Get header line and split in columns.
+const firstLine = csvFile.split('\n')[0];
+const colsInFile = firstLine.split(',');
 
-// Add another set of generic headers.
-csvHeaders.push("currencyResult");
-csvHeaders.push("total");
-csvHeaders.push("currencyTotal");
+for (let idx = 0; idx <= colsInFile.length; idx++) {
 
-// If a dividend record was in the export, add "Withholding Tax" & "Currency (withholding tax)" headers.
-if (csvFile.indexOf("Dividend") > -1) {
-    csvHeaders.push("withholdingTax");
-    csvHeaders.push("currencyWithholdingTax");
-}
+    // Ignore empty columns.
+    if (!colsInFile[idx]) {
+        continue;
+    }
+    // Replace all charachters except a-z, and camelCase the string.
+    let col: string = camelize(colsInFile[idx]);
 
-// If either a deposit or withdrawal record was found, add "Notes" header.
-if (csvFile.indexOf("Deposit") > -1 || csvFile.indexOf("Withdrawal") > -1) {
-    csvHeaders.push("notes");
-}
+    // Manual polishing..
+    if (col === "iSIN") {
+        col = col.toLocaleLowerCase();
+    } else if (col.endsWith("EUR")) {
+        col = col.slice(0, -3) + "Eur";
+    }
 
-// If either a deposit, buy or sell record was found, add "ID" header.
-if (csvFile.indexOf("Deposit") > -1 || csvFile.indexOf("buy") > -1 || csvFile.indexOf("sell") > -1) {
-    csvHeaders.push("id");
-}
-
-// Currency conversion fee, if any.
-if (csvFile.indexOf("conversion") > -1) {
-    csvHeaders.push("currencyConversionFee");
+    csvHeaders.push(col);
 }
 
 // Parse the CSV and convert to Ghostfolio import format.
@@ -77,19 +60,19 @@ parse(csvFile, {
             else if (action.indexOf("sell") > -1) {
                 return "sell";
             }
-            else if (action.indexOf("dividend") > -1) {                
+            else if (action.indexOf("dividend") > -1) {
                 return "dividend";
             }
         }
 
         // Parse numbers to floats (from string).
-        if (context.column === "noShares" ||
+        if (context.column === "noOfShares" ||
             context.column === "priceShare") {
             return parseFloat(columnValue);
         }
 
         // Patch GBX currency (should be GBp).
-        if (context.column === "currency") {
+        if (context.column === "currencyPriceShare") {
             if (columnValue == "GBX") {
                 return "GBp";
             }
@@ -98,7 +81,7 @@ parse(csvFile, {
         return columnValue;
     }
 }, async (_, records: Trading212Record[]) => {
-    
+
     let errorExport = false;
 
     console.log(`Read CSV file ${inputFile}. Start processing..`);
@@ -128,34 +111,25 @@ parse(csvFile, {
             continue;
         }
 
-        // Retrieve YAHOO Finance ticker that corresponds to the ISIN from Trading 212 record.
-        const tickerUrl = `${process.env.GHOSTFOLIO_API_URL}/api/v1/symbol/lookup?query=${record.isin}`;
-        const tickerResponse = await fetch(tickerUrl, {
-            method: "GET",
-            headers: [["Authorization", `Bearer ${bearer.authToken}`]]
-        });
-
-        // Check if response was not unauthorized.
-        if (tickerResponse.status === 401) {
-            console.error("Ghostfolio access token is not valid!");
+        let ticker: any;
+        try { ticker = await getTicker(bearer.authToken, record); }
+        catch {
             errorExport = true;
             break;
         }
-        
-        const tickers = await tickerResponse.json();
 
         // Add record to export.
         exportFile.activities.push({
             accountId: process.env.GHOSTFOLIO_ACCOUNT_ID,
             comment: "",
             fee: 0,
-            quantity: record.noShares,
+            quantity: record.noOfShares,
             type: GhostfolioOrderType[record.action],
             unitPrice: record.priceShare,
-            currency: record.currency,
+            currency: record.currencyPriceShare,
             dataSource: "YAHOO",
             date: dayjs(record.time).format("YYYY-MM-DDTHH:mm:ssZ"),
-            symbol: tickers.items[0].symbol
+            symbol: ticker.symbol
         });
     }
 
@@ -172,3 +146,72 @@ parse(csvFile, {
         console.log("Wrote data to 'ghostfolio-t212.json'!");
     }
 });
+
+function camelize(str) {
+    return str.replace(/[^a-zA-Z ]/g, "").replace(/(?:^\w|[A-Z]|\b\w)/g, function (word, index) {
+        return index === 0 ? word.toLowerCase() : word.toUpperCase();
+    }).replace(/\s+/g, '');
+}
+
+/**
+ * Get tickers for a security.
+ * 
+ * @param authToken The authorization bearer token
+ * @param isin The isin of the security
+ * @param ticker The ticker of the security
+ * @returns The tickers that are retrieved from Ghostfolio.
+ */
+async function getTicker(authToken, record): Promise<any> {
+
+    // First try by ISIN.
+    let tickers = await getTickersByQuery(authToken, record.isin);
+
+    // If no result found by ISIN, try by ticker.
+    if (tickers.length == 0) {
+        tickers = await getTickersByQuery(authToken, record.ticker);
+    }
+
+    // Find a symbol that has the same currency.
+    let tickerMatch = tickers.find(i => i.currency === record.currencyPriceShare);
+
+    // If no currency match has been found, try to query Ghostfolio by ticker exclusively and search again.
+    if (!tickerMatch) {
+        const queryByTicker = await getTickersByQuery(authToken, record.ticker);
+        tickerMatch = queryByTicker.find(i => i.currency === record.currencyPriceShare);
+    }
+
+    // If still no currency match has been found, try to query Ghostfolio by name exclusively and search again.
+    if (!tickerMatch) {
+        const queryByTicker = await getTickersByQuery(authToken, record.name);
+        tickerMatch = queryByTicker.find(i => i.currency === record.currencyPriceShare);
+    }
+
+    return tickerMatch;
+}
+
+/**
+ * Get tickers for a security by a given key.
+ * 
+ * @param authToken The authorization bearer token.
+ * @param query The security identification to query by.
+ * @returns The tickers that are retrieved from Ghostfolio, if any.
+ */
+async function getTickersByQuery(authToken, query): Promise<any> {
+
+    // Retrieve YAHOO Finance ticker that corresponds to the ISIN from Trading 212 record.
+    const tickerUrl = `${process.env.GHOSTFOLIO_API_URL}/api/v1/symbol/lookup?query=${query}`;
+    const tickerResponse = await fetch(tickerUrl, {
+        method: "GET",
+        headers: [["Authorization", `Bearer ${authToken}`]]
+    });
+
+    // Check if response was not unauthorized.
+    if (tickerResponse.status === 401) {
+        console.error("Ghostfolio access token is not valid!");
+        throw new Error("Ghostfolio access token is not valid!");
+    }
+
+    var response = await tickerResponse.json();
+
+    return response.items;
+}
