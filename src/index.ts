@@ -173,6 +173,7 @@ async function getTicker(authToken, record): Promise<any> {
 
     // If no result found by ISIN, try by ticker.
     if (tickers.length == 0) {
+        logDebug(`Not a single ticker found for ISIN ${record.ison}, trying by ticker ${record.ticker}`);
         tickers = await getTickersByQuery(authToken, record.ticker);
     }
 
@@ -181,12 +182,14 @@ async function getTicker(authToken, record): Promise<any> {
 
     // If no currency match has been found, try to query Ghostfolio by ticker exclusively and search again.
     if (!tickerMatch) {
+        logDebug(`No initial match found, trying by ticker ${record.ticker}`);
         const queryByTicker = await getTickersByQuery(authToken, record.ticker);
         tickerMatch = queryByTicker.find(i => i.currency === record.currencyPriceShare);
     }
 
     // If still no currency match has been found, try to query Ghostfolio by name exclusively and search again.
     if (!tickerMatch) {
+        logDebug(`No match found for ticker ${record.ticker}, trying by name ${record.name}`);
         const queryByTicker = await getTickersByQuery(authToken, record.name);
         tickerMatch = queryByTicker.find(i => i.currency === record.currencyPriceShare);
     }
@@ -219,4 +222,11 @@ async function getTickersByQuery(authToken, query): Promise<any> {
     var response = await tickerResponse.json();
 
     return response.items;
+}
+
+function logDebug(message) {
+
+    if (process.env.DEBUG_LOGGING) {
+        console.log(`\t${message}`);
+    }
 }
