@@ -98,12 +98,12 @@ parse(csvFile, {
     const bearer = await bearerResponse.json();
 
     // Start progress bar.
-    const progress = new cliProgesss.SingleBar({}, cliProgesss.Presets.shades_classic);
-    progress.start(records.length - 1, 0);
+    const progress = new cliProgesss.MultiBar({ stopOnComplete: true, forceRedraw: true }, cliProgesss.Presets.shades_classic);
+    const bar1 = progress.create(records.length - 1, 0);
 
     for (let idx = 0; idx < records.length; idx++) {
         const record = records[idx];
-        progress.update(idx);
+        bar1.increment();
 
         // Skip deposit/withdraw transactions.
         if (record.action.toLocaleLowerCase().indexOf("deposit") > -1 ||
@@ -112,7 +112,7 @@ parse(csvFile, {
         }
 
         let ticker: any;
-        try { ticker = await getTicker(bearer.authToken, record); }
+        try { ticker = await getTicker(bearer.authToken, record, progress); }
         catch (err) {
             errorExport = true;
             break;
@@ -164,17 +164,21 @@ function camelize(str) {
  * @param authToken The authorization bearer token
  * @param isin The isin of the security
  * @param ticker The ticker of the security
+ * @param progress The progress bar instance, for logging (optional)
  * @returns The tickers that are retrieved from Ghostfolio.
  */
-async function getTicker(authToken, record): Promise<any> {
-
+async function getTicker(authToken, record, progress?): Promise<any> {
+    
     // First try by ISIN.
     let tickers = await getTickersByQuery(authToken, record.isin);
 
     // If no result found by ISIN, try by ticker.
     if (tickers.length == 0) {
-        logDebug(`Not a single ticker found for ISIN ${record.ison}, trying by ticker ${record.ticker}`);
+        logDebug(`getTicker(): Not a single ticker found for ISIN ${record.isin}, trying by ticker ${record.ticker}`, progress);
         tickers = await getTickersByQuery(authToken, record.ticker);
+    }
+    else {
+        logDebug(`getTicker(): Found ${tickers.length} matches by ISIN`, progress);
     }
 
     // Find a symbol that has the same currency.
@@ -182,18 +186,24 @@ async function getTicker(authToken, record): Promise<any> {
 
     // If no currency match has been found, try to query Ghostfolio by ticker exclusively and search again.
     if (!tickerMatch) {
-        logDebug(`No initial match found, trying by ticker ${record.ticker}`);
+        logDebug(`getTicker(): No initial match found, trying by ticker ${record.ticker}`, progress);
         const queryByTicker = await getTickersByQuery(authToken, record.ticker);
         tickerMatch = queryByTicker.find(i => i.currency === record.currencyPriceShare);
+    }
+    else {
+        logDebug(`getTicker(): Match found for ticker ${record.ticker}`, progress);
     }
 
     // If still no currency match has been found, try to query Ghostfolio by name exclusively and search again.
     if (!tickerMatch) {
-        logDebug(`No match found for ticker ${record.ticker}, trying by name ${record.name}`);
+        logDebug(`getTicker(): No match found for ticker ${record.ticker}, trying by name ${record.name}`, progress);
         const queryByTicker = await getTickersByQuery(authToken, record.name);
         tickerMatch = queryByTicker.find(i => i.currency === record.currencyPriceShare);
     }
-
+    else {
+        logDebug(`getTicker(): Match found for name ${record.name}`, progress);
+    }
+    
     return tickerMatch;
 }
 
@@ -224,9 +234,15 @@ async function getTickersByQuery(authToken, query): Promise<any> {
     return response.items;
 }
 
-function logDebug(message) {
+function logDebug(message, progress?) {
 
     if (process.env.DEBUG_LOGGING) {
-        console.log(`\t${message}`);
+        
+        if (!progress) {
+            console.log(`\t${message}`);
+        }
+        else {
+            progress.log(`\t${message}\n`);
+        }
     }
 }
