@@ -120,7 +120,7 @@ parse(csvFile, {
 
         // Log whenever there was no match found.
         if (!ticker) {
-            throw new Error(`Could not find a match for ticker ${record.ticker} with currency ${record.currencyPriceShare}`);
+            throw new Error(`Could not find a match for ticker ${record.ticker} (index ${idx}) with currency ${record.currencyPriceShare}..`);
         }
 
         // Add record to export.
