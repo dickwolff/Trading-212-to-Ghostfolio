@@ -107,7 +107,8 @@ parse(csvFile, {
 
         // Skip deposit/withdraw transactions.
         if (record.action.toLocaleLowerCase().indexOf("deposit") > -1 ||
-            record.action.toLocaleLowerCase().indexOf("withdraw") > -1) {
+            record.action.toLocaleLowerCase().indexOf("withdraw") > -1 ||
+            record.action.toLocaleLowerCase().indexOf("cash") > -1) {
             continue;
         }
 
