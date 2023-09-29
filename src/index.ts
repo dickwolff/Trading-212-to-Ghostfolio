@@ -99,16 +99,16 @@ parse(csvFile, {
 
     // Start progress bar.
     const progress = new cliProgesss.MultiBar({ stopOnComplete: true, forceRedraw: true }, cliProgesss.Presets.shades_classic);
-    const bar1 = progress.create(records.length - 1, 0);
+    const bar1 = progress.create(records.length, 0);
 
     for (let idx = 0; idx < records.length; idx++) {
         const record = records[idx];
-        bar1.increment();
-
+        
         // Skip deposit/withdraw transactions.
         if (record.action.toLocaleLowerCase().indexOf("deposit") > -1 ||
             record.action.toLocaleLowerCase().indexOf("withdraw") > -1 ||
-            record.action.toLocaleLowerCase().indexOf("cash") > -1) {
+            record.action.toLocaleLowerCase().indexOf("cash") > -1) {    
+            bar1.increment();
             continue;
         }
 
@@ -137,6 +137,8 @@ parse(csvFile, {
             date: dayjs(record.time).format("YYYY-MM-DDTHH:mm:ssZ"),
             symbol: ticker.symbol
         });
+
+        bar1.increment();
     }
 
     progress.stop();
